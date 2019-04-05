@@ -1,13 +1,17 @@
 version: '3'
 services:
-  mysql:
-    image: mysql:${MYSQL_VERSION}
-    container_name: mysql
-    restart: always
-    volumes:
-      - "${DATA_DIR}/mysql:/var/lib/mysql"
-    environment: 
-      MYSQL_ROOT_PASSWORD: nopassword
+  # mariadb:
+  #  image: mariadb:${MARIADB_VERSION}
+  #  container_name: mariadb
+  #  restart: always
+  #  volumes:
+  #    - "${DATA_DIR}/mysql:/var/lib/mysql"
+  #  environment: 
+  #    MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+
+  # redis:
+  #  image: redis:${REDIS_VERSION}
+  #  restart: always
 
   nextcloud:
     image: nextcloud:${NEXTCLOUD_VERSION}
@@ -16,17 +20,26 @@ services:
     volumes:
       - "${DATA_DIR}/nextcloud:/var/www/html"
       - "${DATA_DIR}/mysql:/var/lib/mysql"
-    links:
-      - mysql:mysql
+    # links:
+      # - mariadb:mariadb
+      # - redis:redis
     environment:
-      MYSQL_HOST: mysql
-      MYSQL_DATABASE: nextcloud
-      MYSQL_USER: root
-      MYSQL_PASSWORD: nopassword
+      SQLITE_DATABASE: nextcloud
+      # Very low RAM VM = can't use a MySQL db
+      # MYSQL_HOST: mariadb
+      # MYSQL_DATABASE: nextcloud
+      # MYSQL_USER: root
+      # MYSQL_PASSWORD: ${DB_PASSWORD}
       VIRTUAL_HOST: ${HOST}
       LETSENCRYPT_HOST: ${HOST}
-    depends_on:
-      - mysql
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS}
+      NEXTCLOUD_ADMIN_USER: ${ADMIN_USERNAME}
+      NEXTCLOUD_ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      # REDIS_HOST: redis
+    # depends_on:
+      # - mariadb
+      # - redis
 
   reverse-proxy:
     image: jwilder/nginx-proxy:alpine
@@ -56,16 +69,27 @@ services:
     depends_on:
       - reverse-proxy
 
-  backups:
-    image: christophetd/duplicacy-autobackup:v1.0
-    container_name: backups
-    restart: always
-    environment:
-      BACKUP_NAME: "${BACKUP_NAME}"
-      BACKUP_LOCATION: "b2://${B2_BUCKET}"
-      BACKUP_SCHEDULE: "${BACKUP_SCHEDULE}"
-      BACKUP_ENCRYPTION_KEY: "${BACKUP_ENCRYPTION_KEY}"
-      B2_ID: "${B2_ID}"
-      B2_KEY: "${B2_KEY}"
-    volumes:
-      - "${DATA_DIR}:/data"
+#  backups:
+#    image: christophetd/duplicacy-autobackup:v1.0
+#    container_name: backups
+#    restart: always
+#    environment:
+#      BACKUP_NAME: "${BACKUP_NAME}"
+#      BACKUP_LOCATION: ""
+#      BACKUP_SCHEDULE: "${BACKUP_SCHEDULE}"
+#      BACKUP_ENCRYPTION_KEY: "${BACKUP_ENCRYPTION_KEY}"
+#      B2_ID: "${B2_ID}"
+#      HUBIC_TOKEN_FILE: "${HUBIC_TOKEN_FILE}"
+#    volumes:
+#      - "${DATA_DIR}:/data"
+
+#  adminer:
+#    image: adminer
+#    restart: always
+#    environment:
+#      LETSENCRYPT_HOST: ${ADMINER_HOST}
+#      VIRTUAL_PORT: 8080
+#      VIRTUAL_HOST: ${ADMINER_HOST}
+#      LETSENCRYPT_EMAIL: #{LETSENCRYPT_EMAIL}
+#    depends_on:
+#      - mariadb
